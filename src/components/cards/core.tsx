@@ -106,13 +106,22 @@ export const DedicatedAvailability: React.FC<{
   icon,
 }) => {
   const increaseCounter = useStoreActions((actions) => actions.stats.add);
-  const response = useFetch(
+  const searchParams = new URLSearchParams(args).toString();
+  const url =
     `/api/services/${service}/${encodeURIComponent(query || name)}` +
-      new URLSearchParams(args).toString()
-  ) as Response;
+    (searchParams ? `?${searchParams}` : '');
+  const response = useFetch(url) as Response;
 
-  if (response.error) {
+  if (response && response.error) {
     throw new APIError(`${service}: ${response.error}`);
+  }
+
+  if (
+    !response ||
+    typeof response !== 'object' ||
+    typeof response.availability !== 'boolean'
+  ) {
+    throw new APIError(`${service}: Invalid availability response`);
   }
 
   useEffect(() => {
@@ -209,8 +218,8 @@ export const Result: React.FC<{
     availability === undefined
       ? 'inherit'
       : availability
-      ? COLORS.available
-      : COLORS.unavailable;
+        ? COLORS.available
+        : COLORS.unavailable;
   return (
     <ResultContainer>
       <Tooltip overlay={message} placement="top" trigger={['hover']}>
@@ -360,12 +369,20 @@ export const ResultIcon = styled.div`
   width: 1em;
 `;
 
-export const ResultItem = styled.div`
+export const ResultItem = styled.div<{ color?: string }>`
   display: flex;
   flex-direction: row;
   align-items: flex-start;
   word-break: break-all;
-  color: ${({ color }) => color};
+  color: ${({ color }) => color || 'inherit'};
+
+  a {
+    color: ${({ color }) => color || 'inherit'} !important;
+  }
+
+  svg {
+    fill: currentColor;
+  }
 `;
 
 export const ResultName = styled.div`
